@@ -101,6 +101,22 @@ export const translations: Record<string, Record<Lang, string>> = {
   tryAgain: { en: 'Scan Another', hi: 'फिर स्कैन करें', te: 'మరొకటి స్కాన్ చేయండి' },
   cameraPermDenied: { en: 'Camera permission denied', hi: 'कैमरा अनुमति नहीं', te: 'కెమెరా అనుమతి లేదు' },
   micPermDenied: { en: 'Microphone permission denied', hi: 'माइक अनुमति नहीं', te: 'మైక్ అనుమతి లేదు' },
+  ageStage: { en: 'Age Stage', hi: 'उम्र चरण', te: 'వయస్సు దశ' },
+  weaning: { en: 'Weaning', hi: 'दूध छुड़ाना', te: 'ఆహారం ప్రారంభం' },
+  toddler: { en: 'Toddler', hi: 'छोटा बच्चा', te: 'చిన్నపిల్ల' },
+  preschool: { en: 'Preschool', hi: 'प्री-स्कूल', te: 'ప్రీస్కూల్' },
+  school: { en: 'School-Ready', hi: 'स्कूल तैयार', te: 'పాఠశాల సిద్ధం' },
+  dosha: { en: 'Dosha', hi: 'दोष', te: 'దోష' },
+  doshaQuiz: { en: "Find Your Child's Dosha", hi: 'बच्चे का दोष जानें', te: 'మీ పిల్ల దోషాన్ని కనుగొనండి' },
+  doshaDesc: { en: 'A 2-minute Ayurvedic quiz to personalize nutrition for your child', hi: '2 मिनट की आयुर्वेदिक क्विज़', te: '2 నిమిషాల ఆయుర్వేద క్విజ్' },
+  startQuiz: { en: 'Start Quiz', hi: 'क्विज़ शुरू करें', te: 'క్విజ్ ప్రారంభించండి' },
+  season: { en: 'Season', hi: 'ऋतु', te: 'రుతువు' },
+  herbs: { en: 'Herbs Glossary', hi: 'जड़ी-बूटियाँ', te: 'మూలికలు' },
+  benefits: { en: 'Benefits', hi: 'लाभ', te: 'ప్రయోజనాలు' },
+  dosage: { en: 'Safe Use', hi: 'सुरक्षित उपयोग', te: 'సురక్షిత వాడకం' },
+  caution: { en: 'Caution', hi: 'सावधानी', te: 'జాగ్రత్త' },
+  favor: { en: 'Favor', hi: 'प्राथमिकता', te: 'అనుకూలం' },
+  reduce: { en: 'Reduce', hi: 'कम करें', te: 'తగ్గించండి' },
 };
 
 export function t(key: string, lang: Lang = 'en'): string {

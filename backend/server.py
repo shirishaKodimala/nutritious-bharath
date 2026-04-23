@@ -14,7 +14,12 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone
 
 from recipes_seed import RECIPES
+from recipes_seed_extra import EXTRA_RECIPES
 from substitutions import get_substitutions_for_ingredients, SUBSTITUTIONS
+from ayurveda import (
+    SEASONS, current_season, DOSHA_QUIZ, compute_dosha, DOSHA_GUIDANCE,
+    HERBS, age_stage as get_age_stage,
+)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -41,6 +46,7 @@ class Profile(BaseModel):
     region: str = "pan-india"
     language: str = "en"
     dietary: str = "vegetarian"
+    dosha: Optional[str] = None  # vata | pitta | kapha
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -54,6 +60,7 @@ class ProfileCreate(BaseModel):
     region: str = "pan-india"
     language: str = "en"
     dietary: str = "vegetarian"
+    dosha: Optional[str] = None
 
 
 class Recipe(BaseModel):
@@ -100,13 +107,14 @@ class MealPlan(BaseModel):
 
 
 async def seed_recipes():
+    all_recipes = RECIPES + EXTRA_RECIPES
     existing = await db.recipes.count_documents({})
-    if existing >= len(RECIPES):
+    if existing >= len(all_recipes):
         logger.info(f"Recipes already seeded: {existing}")
         return
     await db.recipes.delete_many({})
     docs = []
-    for r in RECIPES:
+    for r in all_recipes:
         doc = {**r, "id": str(uuid.uuid4())}
         docs.append(doc)
     await db.recipes.insert_many(docs)
@@ -139,7 +147,12 @@ async def get_profile():
 
 
 @api_router.get("/recipes", response_model=List[Recipe])
-async def list_recipes(category: Optional[str] = None, region: Optional[str] = None, search: Optional[str] = None):
+async def list_recipes(
+    category: Optional[str] = None,
+    region: Optional[str] = None,
+    search: Optional[str] = None,
+    age_stage: Optional[str] = None,  # 6-12mo | 12-24mo | 24-36mo | 36-72mo | all
+):
     q: Dict[str, Any] = {}
     if category and category != "all":
         q["category"] = category
@@ -150,6 +163,11 @@ async def list_recipes(category: Optional[str] = None, region: Optional[str] = N
     if search:
         s = search.lower()
         recipes = [r for r in recipes if s in r["title"]["en"].lower() or s in r["description"].lower()]
+    if age_stage and age_stage != "all":
+        bounds = {"6-12mo": (6, 12), "12-24mo": (12, 24), "24-36mo": (24, 36), "36-72mo": (36, 72)}
+        if age_stage in bounds:
+            lo, hi = bounds[age_stage]
+            recipes = [r for r in recipes if r["age_min"] <= hi and r["age_max"] >= lo]
     return [Recipe(**r) for r in recipes]
 
 
@@ -199,6 +217,9 @@ async def generate_meal_plan(payload: MealPlanRequest):
 
         allergies = ", ".join(profile.get("allergies", [])) or "none"
         region = profile.get("region", "pan-india")
+        dosha = profile.get("dosha")
+        season = current_season()
+        stage = get_age_stage(profile["child_age_months"])
 
         pantry_block = ""
         if unavailable:
@@ -206,8 +227,17 @@ async def generate_meal_plan(payload: MealPlanRequest):
             if swap_hints:
                 pantry_block += "\nPreferred substitutions to use instead:\n" + "\n".join(swap_hints)
 
+        dosha_block = ""
+        if dosha:
+            dg = DOSHA_GUIDANCE[dosha]
+            dosha_block = f"\n\nThe child's dominant dosha is {dosha.upper()} — {dg['nature']} Favor: {', '.join(dg['favor'][:3])}. Reduce: {', '.join(dg['reduce'][:2])}."
+
+        season_block = f"\n\nCurrent Indian season is {season['name']} {season['emoji']}. {season['guidance']} Favor seasonal items like: {', '.join(season['favor'][:3])}."
+
+        stage_block = f"\n\nAge stage: {stage['label']} — {stage['focus']}."
+
         user_text = f"""Generate a 7-day meal plan for a {profile['child_age_months']}-month-old child named {profile['child_name']}.
-Region preference: {region}. Allergies: {allergies}. Dietary: {profile.get('dietary', 'vegetarian')}.{pantry_block}
+Region preference: {region}. Allergies: {allergies}. Dietary: {profile.get('dietary', 'vegetarian')}.{stage_block}{dosha_block}{season_block}{pantry_block}
 
 You MAY use these recipes (pick variety): {', '.join(recipe_titles[:40])}
 
@@ -319,7 +349,38 @@ async def growth_assessment():
         "height_cm": height,
         "expected_height_cm": round(expected_height, 1),
         "bmi": round(weight / ((height / 100) ** 2), 1) if height > 0 else 0,
+        "age_stage": get_age_stage(age_m),
     }
+
+
+# Ayurveda endpoints
+@api_router.get("/ayurveda/season")
+async def ayurveda_season():
+    return current_season()
+
+
+@api_router.get("/ayurveda/dosha-quiz")
+async def ayurveda_dosha_quiz():
+    return {"questions": DOSHA_QUIZ}
+
+
+class DoshaAnswers(BaseModel):
+    answers: List[str]
+
+
+@api_router.post("/ayurveda/dosha")
+async def ayurveda_submit_dosha(payload: DoshaAnswers):
+    result = compute_dosha(payload.answers)
+    # persist on profile
+    existing = await db.profiles.find_one({}, {"_id": 0})
+    if existing:
+        await db.profiles.update_one({"id": existing["id"]}, {"$set": {"dosha": result["dominant"]}})
+    return result
+
+
+@api_router.get("/ayurveda/herbs")
+async def ayurveda_herbs():
+    return {"herbs": HERBS}
 
 
 # Voice search — Whisper transcription

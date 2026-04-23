@@ -15,6 +15,14 @@ const CATS = [
   { key: 'dinner', labelKey: 'dinner', icon: 'moon' },
 ];
 
+const AGE_STAGES = [
+  { key: 'all', label: 'All ages' },
+  { key: '6-12mo', label: '6-12mo' },
+  { key: '12-24mo', label: '1-2yr' },
+  { key: '24-36mo', label: '2-3yr' },
+  { key: '36-72mo', label: '3-6yr' },
+];
+
 export default function Recipes() {
   const [recipes, setRecipes] = useState<any[]>([]);
   const [cat, setCat] = useState('all');
@@ -33,12 +41,7 @@ export default function Recipes() {
     }
   }, [params.q]);
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      api.listRecipes({ category: cat, search }).then(setRecipes).catch(e => console.log(e));
-    }, 300);
-    return () => clearTimeout(timeout);
-  }, [cat, search]);
+  // Remove separate useEffect since we consolidated into the one above
 
   const renderCard = ({ item }: { item: any }) => (
     <TouchableOpacity
@@ -109,6 +112,19 @@ export default function Recipes() {
         ))}
       </ScrollView>
 
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ageRow}>
+        {AGE_STAGES.map(a => (
+          <TouchableOpacity
+            key={a.key}
+            style={[styles.ageChip, ageStage === a.key && styles.ageChipActive]}
+            onPress={() => setAgeStage(a.key)}
+            testID={`age-${a.key}`}
+          >
+            <Text style={[styles.ageText, ageStage === a.key && styles.ageTextActive]}>{a.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
       <FlatList
         data={recipes}
         keyExtractor={item => item.id}
@@ -139,6 +155,11 @@ const styles = StyleSheet.create({
   catChipActive: { backgroundColor: colors.terracotta, borderColor: colors.terracotta },
   catText: { fontSize: 13, fontWeight: '500', color: colors.textSecondary },
   catTextActive: { color: colors.coconut, fontWeight: '600' },
+  ageRow: { paddingHorizontal: spacing.base, gap: 6, paddingBottom: spacing.sm },
+  ageChip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: radius.round, backgroundColor: colors.saffronCream, borderWidth: 1, borderColor: colors.border },
+  ageChipActive: { backgroundColor: colors.basil, borderColor: colors.basil },
+  ageText: { fontSize: 12, fontWeight: '600', color: colors.spice },
+  ageTextActive: { color: colors.coconut },
   card: { flex: 1, backgroundColor: colors.surface, borderRadius: radius.lg, overflow: 'hidden', ...shadow.soft, borderWidth: 1, borderColor: colors.border },
   cardImage: { width: '100%', height: 120 },
   cardBadgeRow: { position: 'absolute', top: 8, left: 8, flexDirection: 'row', gap: 4 },
@@ -147,4 +168,6 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 14, fontWeight: '600', color: colors.indigo, fontFamily: 'serif' },
   cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 },
   cardMetaText: { fontSize: 11, color: colors.textMuted },
+});
+dMetaText: { fontSize: 11, color: colors.textMuted },
 });

@@ -31,6 +31,11 @@ export const api = {
     request('/meal-plan/generate', { method: 'POST', body: JSON.stringify({ unavailable_ingredients: unavailable }) }),
   getLatestPlan: () => request('/meal-plan/latest'),
   getGrowth: () => request('/growth/assessment'),
+  getSeason: () => request('/ayurveda/season'),
+  getDoshaQuiz: () => request('/ayurveda/dosha-quiz'),
+  submitDosha: (answers: string[]) =>
+    request('/ayurveda/dosha', { method: 'POST', body: JSON.stringify({ answers }) }),
+  getHerbs: () => request('/ayurveda/herbs'),
   lookupBarcode: (code: string) => request(`/barcode/${code}`),
   transcribe: async (audioUri: string, language: string = 'en') => {
     const form = new FormData();

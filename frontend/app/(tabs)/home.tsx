@@ -17,17 +17,20 @@ export default function Home() {
   const [profile, setProfile] = useState<any>(null);
   const [growth, setGrowth] = useState<any>(null);
   const [todayRecipe, setTodayRecipe] = useState<any>(null);
+  const [season, setSeason] = useState<any>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [p, g, r] = await Promise.all([
+      const [p, g, r, s] = await Promise.all([
         api.getProfile(),
         api.getGrowth(),
         api.listRecipes({ category: 'lunch' }),
+        api.getSeason(),
       ]);
       setProfile(p);
       setGrowth(g);
+      setSeason(s);
       if (r && r.length) setTodayRecipe(r[Math.floor(Math.random() * r.length)]);
     } catch (e) {
       console.log('home load error', e);
@@ -69,14 +72,16 @@ export default function Home() {
           </View>
         </View>
 
-        {/* Seasonal banner */}
+        {/* Seasonal banner — now with real Ayurvedic Ritucharya data */}
         <View style={styles.seasonalBanner}>
           <Image source={{ uri: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d' }} style={styles.bannerBg} />
           <View style={styles.bannerOverlay} />
           <View style={styles.bannerContent}>
-            <Text style={styles.bannerLabel}>SEASONAL WISDOM</Text>
-            <Text style={styles.bannerTitle}>Warm spices for growing bones</Text>
-            <Text style={styles.bannerSubtitle}>Turmeric • Ginger • Cumin</Text>
+            <Text style={styles.bannerLabel}>RITUCHARYA {season?.emoji || '🌿'}</Text>
+            <Text style={styles.bannerTitle}>{season?.name || 'Seasonal Wisdom'}</Text>
+            <Text style={styles.bannerSubtitle} numberOfLines={2}>
+              {season?.guidance || 'Warming spices for growing bones'}
+            </Text>
           </View>
         </View>
 
@@ -154,6 +159,14 @@ export default function Home() {
             <Ionicons name="calendar" size={22} color={colors.terracotta} />
             <Text style={styles.quickText}>{t('mealPlan', lang)}</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/dosha-quiz')} testID="quick-dosha">
+            <Ionicons name="flower" size={22} color={colors.terracotta} />
+            <Text style={styles.quickText}>{t('dosha', lang)}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/herbs')} testID="quick-herbs">
+            <Ionicons name="leaf" size={22} color={colors.terracotta} />
+            <Text style={styles.quickText}>{t('herbs', lang)}</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -195,7 +208,7 @@ const styles = StyleSheet.create({
   tipIconWrap: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
   tipLabel: { fontSize: 11, color: colors.terracotta, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
   tipText: { fontSize: 14, color: colors.indigo, marginTop: 4, lineHeight: 20 },
-  quickGrid: { flexDirection: 'row', gap: spacing.sm },
-  quickBtn: { flex: 1, backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.base, alignItems: 'center', gap: spacing.xs, borderWidth: 1, borderColor: colors.border, ...shadow.soft },
+  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  quickBtn: { flexBasis: '47%', flexGrow: 1, backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.base, alignItems: 'center', gap: spacing.xs, borderWidth: 1, borderColor: colors.border, ...shadow.soft },
   quickText: { fontSize: 13, fontWeight: '600', color: colors.indigo },
 });

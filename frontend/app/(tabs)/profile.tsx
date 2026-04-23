@@ -155,6 +155,38 @@ export default function Profile() {
           <Text style={styles.editText}>{t('editProfile', lang)}</Text>
         </TouchableOpacity>
 
+        {/* Ayurveda section: Dosha + Herbs */}
+        <Text style={styles.sectionLabel}>Ayurveda</Text>
+        <TouchableOpacity
+          style={styles.ayurvedaCard}
+          onPress={() => router.push('/dosha-quiz')}
+          testID="profile-dosha"
+        >
+          <View style={[styles.ayurIcon, { backgroundColor: '#8B5FBF20' }]}>
+            <Ionicons name="flower" size={20} color="#8B5FBF" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.ayurTitle}>{profile?.dosha ? t('dosha', lang) + `: ${profile.dosha.toUpperCase()}` : t('doshaQuiz', lang)}</Text>
+            <Text style={styles.ayurDesc}>{profile?.dosha ? 'Tap to re-take quiz' : t('doshaDesc', lang)}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.ayurvedaCard}
+          onPress={() => router.push('/herbs')}
+          testID="profile-herbs"
+        >
+          <View style={[styles.ayurIcon, { backgroundColor: colors.basil + '20' }]}>
+            <Ionicons name="leaf" size={20} color={colors.basil} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.ayurTitle}>{t('herbs', lang)}</Text>
+            <Text style={styles.ayurDesc}>10 child-safe herbs with dosages</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
         {/* Meal Reminders */}
         <Text style={styles.sectionLabel}>{t('mealReminders', lang)}</Text>
         <Text style={styles.remindersHint}>{t('remindersDesc', lang)}</Text>
@@ -270,4 +302,8 @@ const styles = StyleSheet.create({
   timeBtn: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.saffronCream, alignItems: 'center', justifyContent: 'center' },
   timeBtnDisabled: { backgroundColor: colors.border, opacity: 0.5 },
   timeText: { fontSize: 13, color: colors.terracotta, fontWeight: '700', minWidth: 44, textAlign: 'center' },
+  ayurvedaCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.base, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.sm, ...shadow.soft },
+  ayurIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  ayurTitle: { fontSize: 14, fontWeight: '700', color: colors.indigo, fontFamily: 'serif' },
+  ayurDesc: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
 });
