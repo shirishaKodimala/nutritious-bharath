@@ -13,7 +13,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone
 
 from recipes_seed import RECIPES
-from substitutions import get_substitutions_for_ingredients
+from substitutions import get_substitutions_for_ingredients, SUBSTITUTIONS
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -77,6 +77,7 @@ class Recipe(BaseModel):
 
 class MealPlanRequest(BaseModel):
     profile_id: Optional[str] = None
+    unavailable_ingredients: List[str] = []
 
 
 class MealPlanDay(BaseModel):
@@ -93,6 +94,7 @@ class MealPlan(BaseModel):
     profile_id: Optional[str] = None
     days: List[MealPlanDay]
     shopping_list: List[str]
+    unavailable_ingredients: List[str] = []
     generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -175,6 +177,16 @@ async def generate_meal_plan(payload: MealPlanRequest):
     all_recipes = await db.recipes.find({}, {"_id": 0}).to_list(500)
     recipe_titles = [r["title"]["en"] for r in all_recipes]
 
+    unavailable = [i.strip().lower() for i in (payload.unavailable_ingredients or []) if i.strip()]
+
+    # Build swap hints for Claude based on unavailable ingredients
+    swap_hints = []
+    for ing in unavailable:
+        subs = SUBSTITUTIONS.get(ing)
+        if subs:
+            alts = ", ".join([s["swap"] for s in subs])
+            swap_hints.append(f"- {ing} → use {alts}")
+
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage
 
@@ -187,8 +199,14 @@ async def generate_meal_plan(payload: MealPlanRequest):
         allergies = ", ".join(profile.get("allergies", [])) or "none"
         region = profile.get("region", "pan-india")
 
+        pantry_block = ""
+        if unavailable:
+            pantry_block = f"\n\nIMPORTANT — these ingredients are UNAVAILABLE (mother is out of them), do NOT use them: {', '.join(unavailable)}."
+            if swap_hints:
+                pantry_block += "\nPreferred substitutions to use instead:\n" + "\n".join(swap_hints)
+
         user_text = f"""Generate a 7-day meal plan for a {profile['child_age_months']}-month-old child named {profile['child_name']}.
-Region preference: {region}. Allergies: {allergies}. Dietary: {profile.get('dietary', 'vegetarian')}.
+Region preference: {region}. Allergies: {allergies}. Dietary: {profile.get('dietary', 'vegetarian')}.{pantry_block}
 
 You MAY use these recipes (pick variety): {', '.join(recipe_titles[:40])}
 
@@ -199,7 +217,7 @@ Return ONLY valid JSON in this exact structure, no extra text:
   ],
   "shopping_list": ["item1", "item2"]
 }}
-Include all 7 days Monday to Sunday."""
+Include all 7 days Monday to Sunday. Make sure the shopping_list does NOT contain the unavailable ingredients listed above."""
 
         chat = LlmChat(
             api_key=os.environ["EMERGENT_LLM_KEY"],
@@ -220,18 +238,27 @@ Include all 7 days Monday to Sunday."""
             profile_id=profile["id"],
             days=[MealPlanDay(**d) for d in data["days"]],
             shopping_list=data.get("shopping_list", []),
+            unavailable_ingredients=unavailable,
         )
     except Exception as e:
         logger.error(f"Claude generation failed: {e}, using fallback plan")
-        plan = _fallback_plan(profile, all_recipes)
+        plan = _fallback_plan(profile, all_recipes, unavailable)
 
     await db.meal_plans.insert_one(plan.dict().copy())
     return plan
 
 
-def _fallback_plan(profile: dict, recipes: list) -> MealPlan:
+def _fallback_plan(profile: dict, recipes: list, unavailable: list[str] = None) -> MealPlan:
+    unavailable = unavailable or []
+    # Filter recipes that mention any unavailable ingredient
+    def is_ok(r):
+        joined = " ".join(r.get("ingredients", [])).lower()
+        return not any(u in joined for u in unavailable)
+
+    filtered = [r for r in recipes if is_ok(r)] or recipes
+
     by_cat = {"breakfast": [], "lunch": [], "snack": [], "dinner": []}
-    for r in recipes:
+    for r in filtered:
         if r["category"] in by_cat:
             by_cat[r["category"]].append(r["title"]["en"])
 
@@ -257,7 +284,8 @@ def _fallback_plan(profile: dict, recipes: list) -> MealPlan:
         ))
     shopping = ["Rice", "Wheat flour", "Moong dal", "Toor dal", "Ghee", "Milk", "Yogurt",
                 "Seasonal vegetables", "Seasonal fruits", "Turmeric", "Cumin", "Jaggery", "Cardamom"]
-    return MealPlan(profile_id=profile.get("id"), days=days, shopping_list=shopping)
+    shopping = [s for s in shopping if s.lower() not in unavailable]
+    return MealPlan(profile_id=profile.get("id"), days=days, shopping_list=shopping, unavailable_ingredients=unavailable)
 
 
 @api_router.get("/meal-plan/latest", response_model=Optional[MealPlan])

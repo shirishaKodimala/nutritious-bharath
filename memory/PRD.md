@@ -91,3 +91,4 @@ Mobile-first Expo React Native app with bottom tab navigation.
 ✅ i18n EN/HI/TE across all user-facing strings
 ✅ Ingredient substitutions (20+ global swaps with reasons, auto-matched per recipe)
 ✅ Local meal reminder notifications (breakfast/lunch/snack/dinner, per-meal toggle + ±30min time adjust)
+✅ Pantry-aware AI meal planner — mother taps what she's out of; Claude plans 7 days without those ingredients + excludes them from shopping list

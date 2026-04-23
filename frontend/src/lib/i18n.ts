@@ -76,6 +76,10 @@ export const translations: Record<string, Record<Lang, string>> = {
   remindersDesc: { en: 'Get gentle nudges at meal times', hi: 'भोजन के समय हल्का नोटिफिकेशन', te: 'భోజన సమయంలో నోటిఫికేషన్లు' },
   webNotSupported: { en: 'Notifications are available on mobile app only.', hi: 'नोटिफिकेशन केवल मोबाइल ऐप पर उपलब्ध हैं।', te: 'నోటిఫికేషన్లు మొబైల్ యాప్‌లో మాత్రమే.' },
   permDenied: { en: 'Permission denied. Enable notifications in settings.', hi: 'अनुमति नहीं। सेटिंग्स में नोटिफिकेशन चालू करें।', te: 'అనుమతి నిరాకరించబడింది. సెట్టింగ్స్‌లో ఆన్ చేయండి.' },
+  pantryCheck: { en: 'Pantry Check', hi: 'रसोई की जांच', te: 'వంటగది తనిఖీ' },
+  pantryDesc: { en: "Tap items you're out of — Claude will plan around them", hi: 'जो नहीं है उसे टैप करें — Claude उसके बिना योजना बनाएगा', te: 'లేని వస్తువులను ట్యాప్ చేయండి — Claude దాని చుట్టూ ప్రణాళిక చేస్తుంది' },
+  selectedMissing: { en: 'Missing', hi: 'नहीं है', te: 'లేదు' },
+  avoiding: { en: 'Avoiding', hi: 'नहीं उपयोग', te: 'నివారిస్తోంది' },
 };
 
 export function t(key: string, lang: Lang = 'en'): string {

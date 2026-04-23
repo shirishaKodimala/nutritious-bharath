@@ -27,8 +27,8 @@ export const api = {
   },
   getRecipe: (id: string) => request(`/recipes/${id}`),
   getSubstitutions: (id: string) => request(`/recipes/${id}/substitutions`),
-  generateMealPlan: () =>
-    request('/meal-plan/generate', { method: 'POST', body: JSON.stringify({}) }),
+  generateMealPlan: (unavailable: string[] = []) =>
+    request('/meal-plan/generate', { method: 'POST', body: JSON.stringify({ unavailable_ingredients: unavailable }) }),
   getLatestPlan: () => request('/meal-plan/latest'),
   getGrowth: () => request('/growth/assessment'),
 };

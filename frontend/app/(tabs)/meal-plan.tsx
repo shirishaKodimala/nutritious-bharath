@@ -7,6 +7,18 @@ import { colors, radius, spacing, shadow } from '../../src/lib/theme';
 import { t, Lang } from '../../src/lib/i18n';
 import { api } from '../../src/lib/api';
 
+const PANTRY_ITEMS = [
+  { key: 'ghee', icon: 'water', label: 'Ghee' },
+  { key: 'milk', icon: 'cafe', label: 'Milk' },
+  { key: 'wheat flour', icon: 'disc', label: 'Wheat flour' },
+  { key: 'paneer', icon: 'square', label: 'Paneer' },
+  { key: 'yogurt', icon: 'ellipse', label: 'Yogurt' },
+  { key: 'egg', icon: 'egg', label: 'Eggs' },
+  { key: 'chicken', icon: 'restaurant', label: 'Chicken' },
+  { key: 'fish', icon: 'fish', label: 'Fish' },
+  { key: 'rice', icon: 'apps', label: 'Rice' },
+];
+
 const MEALS = [
   { key: 'breakfast', icon: 'sunny', color: colors.turmeric },
   { key: 'lunch', icon: 'restaurant', color: colors.terracotta },
@@ -20,6 +32,7 @@ export default function MealPlan() {
   const [activeDay, setActiveDay] = useState(0);
   const [lang, setLang] = useState<Lang>('en');
   const [showShopping, setShowShopping] = useState(false);
+  const [unavailable, setUnavailable] = useState<string[]>([]);
 
   useFocusEffect(useCallback(() => {
     (async () => {
@@ -33,7 +46,7 @@ export default function MealPlan() {
   const generate = async () => {
     setLoading(true);
     try {
-      const p = await api.generateMealPlan();
+      const p = await api.generateMealPlan(unavailable);
       setPlan(p);
       setActiveDay(0);
     } catch (e: any) {
@@ -41,6 +54,10 @@ export default function MealPlan() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const togglePantry = (key: string) => {
+    setUnavailable(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
   };
 
   const day = plan?.days?.[activeDay];
@@ -53,7 +70,7 @@ export default function MealPlan() {
       </View>
 
       {!plan && !loading && (
-        <View style={styles.emptyWrap}>
+        <ScrollView contentContainerStyle={styles.emptyWrap}>
           <View style={styles.emptyIconWrap}>
             <Ionicons name="sparkles" size={40} color={colors.terracotta} />
           </View>
@@ -61,11 +78,38 @@ export default function MealPlan() {
           <Text style={styles.emptyDesc}>
             Personalized for {'\n'}your child&apos;s age, allergies & region.
           </Text>
-          <TouchableOpacity style={styles.primaryBtn} onPress={generate} testID="generate-plan-btn">
+
+          {/* Pantry check */}
+          <View style={styles.pantryCard} testID="pantry-card">
+            <View style={styles.pantryHeader}>
+              <Ionicons name="basket" size={16} color={colors.terracotta} />
+              <Text style={styles.pantryTitle}>{t('pantryCheck', lang)}</Text>
+            </View>
+            <Text style={styles.pantryDesc}>{t('pantryDesc', lang)}</Text>
+            <View style={styles.pantryGrid}>
+              {PANTRY_ITEMS.map(item => {
+                const selected = unavailable.includes(item.key);
+                return (
+                  <TouchableOpacity
+                    key={item.key}
+                    style={[styles.pantryChip, selected && styles.pantryChipActive]}
+                    onPress={() => togglePantry(item.key)}
+                    testID={`pantry-${item.key}`}
+                  >
+                    <Ionicons name={item.icon as any} size={13} color={selected ? colors.coconut : colors.textSecondary} />
+                    <Text style={[styles.pantryChipText, selected && styles.pantryChipTextActive]}>{item.label}</Text>
+                    {selected && <Ionicons name="close-circle" size={14} color={colors.coconut} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          <TouchableOpacity style={[styles.primaryBtn, { marginTop: spacing.lg }]} onPress={generate} testID="generate-plan-btn">
             <Ionicons name="flash" size={18} color={colors.coconut} />
             <Text style={styles.primaryBtnText}>{t('generatePlan', lang)}</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       )}
 
       {loading && (
@@ -90,6 +134,16 @@ export default function MealPlan() {
               </TouchableOpacity>
             ))}
           </ScrollView>
+
+          {/* Avoiding tag */}
+          {plan.unavailable_ingredients?.length > 0 && (
+            <View style={styles.avoidingBar} testID="avoiding-bar">
+              <Ionicons name="alert-circle" size={14} color={colors.marigold} />
+              <Text style={styles.avoidingText}>
+                {t('avoiding', lang)}: {plan.unavailable_ingredients.join(', ')}
+              </Text>
+            </View>
+          )}
 
           {/* Meals */}
           <View style={styles.mealsList}>
@@ -150,7 +204,7 @@ const styles = StyleSheet.create({
   headerWrap: { padding: spacing.base, paddingBottom: spacing.sm },
   title: { fontSize: 28, fontFamily: 'serif', fontWeight: '700', color: colors.indigo },
   subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
-  emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
+  emptyWrap: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl, paddingBottom: spacing.xxl },
   emptyIconWrap: { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.coconut, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.base, ...shadow.soft },
   emptyTitle: { fontSize: 22, fontFamily: 'serif', fontWeight: '700', color: colors.indigo, marginBottom: spacing.sm },
   emptyDesc: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.lg, lineHeight: 22 },
@@ -173,4 +227,15 @@ const styles = StyleSheet.create({
   shoppingList: { marginHorizontal: spacing.base, marginTop: spacing.sm, padding: spacing.base, backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, gap: 8 },
   shoppingItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   shoppingItemText: { fontSize: 14, color: colors.textSecondary },
+  pantryCard: { width: '100%', maxWidth: 380, backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.base, borderWidth: 1, borderColor: colors.border, ...shadow.soft },
+  pantryHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  pantryTitle: { fontSize: 14, fontWeight: '700', color: colors.indigo, fontFamily: 'serif' },
+  pantryDesc: { fontSize: 12, color: colors.textMuted, marginBottom: spacing.sm, lineHeight: 16 },
+  pantryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  pantryChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.round, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border },
+  pantryChipActive: { backgroundColor: colors.terracotta, borderColor: colors.terracotta },
+  pantryChipText: { fontSize: 12, fontWeight: '500', color: colors.textSecondary },
+  pantryChipTextActive: { color: colors.coconut, fontWeight: '600' },
+  avoidingBar: { flexDirection: 'row', alignItems: 'center', gap: 6, marginHorizontal: spacing.base, padding: spacing.sm, backgroundColor: colors.saffronCream, borderRadius: radius.md, borderLeftWidth: 3, borderLeftColor: colors.marigold },
+  avoidingText: { flex: 1, fontSize: 12, color: colors.textSecondary, fontStyle: 'italic' },
 });
