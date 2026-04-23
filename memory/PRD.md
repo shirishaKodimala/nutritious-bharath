@@ -85,7 +85,9 @@ Mobile-first Expo React Native app with bottom tab navigation.
 **Recipe shareability**: Add a "Share this recipe" deep-link button that creates a branded image card of the recipe (with Nutritious India watermark + Ayurvedic badge). This drives organic WhatsApp-based viral growth among Indian mother communities — the highest-engagement distribution channel in India. Pairs naturally with the upcoming Community phase.
 
 ## Status
-✅ Backend: 12/12 tests passing (live Claude Sonnet 4.5 verified)
+✅ Backend: 12/12 tests passing (live Claude Sonnet 4.5 verified) + `/recipes/{id}/substitutions` endpoint tested
 ✅ Frontend: All 5 tabs + onboarding + recipe detail built with design-system tokens
 ✅ 50 recipes seeded on startup
 ✅ i18n EN/HI/TE across all user-facing strings
+✅ Ingredient substitutions (20+ global swaps with reasons, auto-matched per recipe)
+✅ Local meal reminder notifications (breakfast/lunch/snack/dinner, per-meal toggle + ±30min time adjust)

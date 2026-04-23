@@ -26,6 +26,7 @@ export const api = {
     return request(`/recipes${qs ? `?${qs}` : ''}`);
   },
   getRecipe: (id: string) => request(`/recipes/${id}`),
+  getSubstitutions: (id: string) => request(`/recipes/${id}/substitutions`),
   generateMealPlan: () =>
     request('/meal-plan/generate', { method: 'POST', body: JSON.stringify({}) }),
   getLatestPlan: () => request('/meal-plan/latest'),

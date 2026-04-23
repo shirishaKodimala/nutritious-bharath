@@ -1,11 +1,15 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing, shadow } from '../../src/lib/theme';
 import { t, Lang } from '../../src/lib/i18n';
 import { api } from '../../src/lib/api';
+import {
+  loadReminders, saveReminders, applyAllReminders,
+  requestNotificationPermission, ReminderSettings, MealKey, DEFAULT_REMINDERS,
+} from '../../src/lib/notifications';
 
 const LANGS: { key: Lang; label: string }[] = [
   { key: 'en', label: 'English' },
@@ -16,15 +20,46 @@ const LANGS: { key: Lang; label: string }[] = [
 export default function Profile() {
   const [profile, setProfile] = useState<any>(null);
   const [growth, setGrowth] = useState<any>(null);
+  const [reminders, setReminders] = useState<ReminderSettings>(DEFAULT_REMINDERS);
 
   const load = useCallback(async () => {
     const p = await api.getProfile().catch(() => null);
     const g = await api.getGrowth().catch(() => null);
+    const r = await loadReminders();
     setProfile(p);
     setGrowth(g);
+    setReminders(r);
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const toggleReminder = async (key: MealKey, value: boolean) => {
+    if (value) {
+      if (Platform.OS === 'web') {
+        Alert.alert(t('webNotSupported', lang));
+        return;
+      }
+      const granted = await requestNotificationPermission();
+      if (!granted) {
+        Alert.alert(t('permDenied', lang));
+        return;
+      }
+    }
+    const next = { ...reminders, [key]: { ...reminders[key], enabled: value } };
+    setReminders(next);
+    await saveReminders(next);
+    await applyAllReminders(next);
+  };
+
+  const bumpTime = async (key: MealKey, deltaMinutes: number) => {
+    const s = reminders[key];
+    let total = s.hour * 60 + s.minute + deltaMinutes;
+    total = (total + 24 * 60) % (24 * 60);
+    const next = { ...reminders, [key]: { ...s, hour: Math.floor(total / 60), minute: total % 60 } };
+    setReminders(next);
+    await saveReminders(next);
+    if (s.enabled) await applyAllReminders(next);
+  };
 
   const changeLang = async (l: Lang) => {
     if (!profile) return;
@@ -119,6 +154,54 @@ export default function Profile() {
           <Ionicons name="create" size={18} color={colors.terracotta} />
           <Text style={styles.editText}>{t('editProfile', lang)}</Text>
         </TouchableOpacity>
+
+        {/* Meal Reminders */}
+        <Text style={styles.sectionLabel}>{t('mealReminders', lang)}</Text>
+        <Text style={styles.remindersHint}>{t('remindersDesc', lang)}</Text>
+        <View style={styles.remindersCard}>
+          {(['breakfast', 'lunch', 'snack', 'dinner'] as MealKey[]).map((key, idx) => {
+            const s = reminders[key];
+            const timeStr = `${s.hour.toString().padStart(2, '0')}:${s.minute.toString().padStart(2, '0')}`;
+            const icons: Record<MealKey, any> = { breakfast: 'sunny', lunch: 'restaurant', snack: 'cafe', dinner: 'moon' };
+            const tints: Record<MealKey, string> = { breakfast: colors.turmeric, lunch: colors.terracotta, snack: colors.basil, dinner: colors.indigo };
+            return (
+              <View key={key} style={[styles.reminderRow, idx < 3 && styles.reminderRowBorder]} testID={`reminder-${key}`}>
+                <View style={[styles.reminderIcon, { backgroundColor: tints[key] + '20' }]}>
+                  <Ionicons name={icons[key]} size={18} color={tints[key]} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.reminderLabel}>{t(key, lang)}</Text>
+                  <View style={styles.timeAdjustRow}>
+                    <TouchableOpacity
+                      disabled={!s.enabled}
+                      style={[styles.timeBtn, !s.enabled && styles.timeBtnDisabled]}
+                      onPress={() => bumpTime(key, -30)}
+                      testID={`${key}-minus`}
+                    >
+                      <Ionicons name="remove" size={12} color={s.enabled ? colors.terracotta : colors.textMuted} />
+                    </TouchableOpacity>
+                    <Text style={[styles.timeText, !s.enabled && { color: colors.textMuted }]}>{timeStr}</Text>
+                    <TouchableOpacity
+                      disabled={!s.enabled}
+                      style={[styles.timeBtn, !s.enabled && styles.timeBtnDisabled]}
+                      onPress={() => bumpTime(key, 30)}
+                      testID={`${key}-plus`}
+                    >
+                      <Ionicons name="add" size={12} color={s.enabled ? colors.terracotta : colors.textMuted} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <Switch
+                  value={s.enabled}
+                  onValueChange={(v) => toggleReminder(key, v)}
+                  trackColor={{ false: colors.border, true: colors.terracotta + '80' }}
+                  thumbColor={s.enabled ? colors.terracotta : colors.coconut}
+                  testID={`${key}-switch`}
+                />
+              </View>
+            );
+          })}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -177,4 +260,14 @@ const styles = StyleSheet.create({
   editText: { color: colors.terracotta, fontWeight: '600' },
   primaryBtn: { backgroundColor: colors.terracotta, paddingVertical: 14, paddingHorizontal: 28, borderRadius: radius.lg, ...shadow.soft },
   primaryBtnText: { color: colors.coconut, fontWeight: '600', fontSize: 15 },
+  remindersHint: { fontSize: 12, color: colors.textMuted, marginBottom: spacing.sm, marginTop: -6 },
+  remindersCard: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, ...shadow.soft, overflow: 'hidden' },
+  reminderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.base },
+  reminderRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  reminderIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  reminderLabel: { fontSize: 14, fontWeight: '600', color: colors.indigo, textTransform: 'capitalize', fontFamily: 'serif' },
+  timeAdjustRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  timeBtn: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.saffronCream, alignItems: 'center', justifyContent: 'center' },
+  timeBtnDisabled: { backgroundColor: colors.border, opacity: 0.5 },
+  timeText: { fontSize: 13, color: colors.terracotta, fontWeight: '700', minWidth: 44, textAlign: 'center' },
 });

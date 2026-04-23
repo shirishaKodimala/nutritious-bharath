@@ -13,6 +13,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone
 
 from recipes_seed import RECIPES
+from substitutions import get_substitutions_for_ingredients
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -155,6 +156,14 @@ async def get_recipe(recipe_id: str):
     if not doc:
         raise HTTPException(404, "Recipe not found")
     return Recipe(**doc)
+
+
+@api_router.get("/recipes/{recipe_id}/substitutions")
+async def recipe_substitutions(recipe_id: str):
+    doc = await db.recipes.find_one({"id": recipe_id}, {"_id": 0, "ingredients": 1})
+    if not doc:
+        raise HTTPException(404, "Recipe not found")
+    return {"substitutions": get_substitutions_for_ingredients(doc["ingredients"])}
 
 
 @api_router.post("/meal-plan/generate", response_model=MealPlan)

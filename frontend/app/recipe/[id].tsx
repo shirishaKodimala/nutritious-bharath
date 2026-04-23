@@ -10,10 +10,14 @@ import { api } from '../../src/lib/api';
 export default function RecipeDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [recipe, setRecipe] = useState<any>(null);
+  const [subs, setSubs] = useState<any[]>([]);
   const [lang, setLang] = useState<Lang>('en');
 
   useEffect(() => {
-    if (id) api.getRecipe(id).then(setRecipe).catch(console.log);
+    if (id) {
+      api.getRecipe(id).then(setRecipe).catch(console.log);
+      api.getSubstitutions(id).then(r => setSubs(r?.substitutions || [])).catch(() => {});
+    }
     api.getProfile().then(p => p && setLang(p.language || 'en')).catch(() => {});
   }, [id]);
 
@@ -90,6 +94,31 @@ export default function RecipeDetail() {
               <Text style={styles.stepText}>{step}</Text>
             </View>
           ))}
+
+          {/* Substitutions */}
+          {subs.length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>{t('substitutions', lang)}</Text>
+              <Text style={styles.subsDesc}>{t('substitutionsDesc', lang)}</Text>
+              {subs.map((s, i) => (
+                <View key={i} style={styles.subBlock} testID={`sub-${s.ingredient}`}>
+                  <View style={styles.subHeader}>
+                    <Ionicons name="swap-horizontal" size={14} color={colors.terracotta} />
+                    <Text style={styles.subIngName}>{s.ingredient}</Text>
+                  </View>
+                  {s.alternatives.map((alt: any, j: number) => (
+                    <View key={j} style={styles.altRow}>
+                      <View style={styles.altBullet} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.altName}>{alt.swap}</Text>
+                        <Text style={styles.altReason}>{alt.reason}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </>
+          )}
         </View>
       </ScrollView>
     </View>
@@ -144,4 +173,12 @@ const styles = StyleSheet.create({
   stepNum: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.terracotta, alignItems: 'center', justifyContent: 'center' },
   stepNumText: { color: colors.coconut, fontWeight: '700', fontSize: 13 },
   stepText: { flex: 1, fontSize: 14, color: colors.indigo, lineHeight: 22, paddingTop: 4 },
+  subsDesc: { fontSize: 13, color: colors.textSecondary, marginBottom: spacing.sm, marginTop: -4 },
+  subBlock: { backgroundColor: colors.saffronCream, padding: spacing.sm, borderRadius: radius.md, marginBottom: spacing.sm, borderLeftWidth: 3, borderLeftColor: colors.terracotta },
+  subHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  subIngName: { fontSize: 13, fontWeight: '700', color: colors.indigo, textTransform: 'capitalize' },
+  altRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 4, paddingLeft: 4 },
+  altBullet: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.basil, marginTop: 6 },
+  altName: { fontSize: 13, fontWeight: '600', color: colors.indigo },
+  altReason: { fontSize: 11, color: colors.textMuted, marginTop: 1 },
 });

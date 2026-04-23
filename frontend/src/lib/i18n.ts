@@ -70,6 +70,12 @@ export const translations: Record<string, Record<Lang, string>> = {
   years: { en: 'yrs', hi: 'साल', te: 'సం' },
   kg: { en: 'kg', hi: 'किग्रा', te: 'కిలో' },
   cm: { en: 'cm', hi: 'सेमी', te: 'సెం.మీ' },
+  substitutions: { en: 'Ingredient Swaps', hi: 'सामग्री विकल्प', te: 'పదార్థ ప్రత్యామ్నాయాలు' },
+  substitutionsDesc: { en: 'Out of an ingredient? Try these instead:', hi: 'सामग्री नहीं है? ये आज़माएँ:', te: 'పదార్థం లేదా? వీటిని ప్రయత్నించండి:' },
+  mealReminders: { en: 'Meal Reminders', hi: 'भोजन रिमाइंडर', te: 'భోజన రిమైండర్లు' },
+  remindersDesc: { en: 'Get gentle nudges at meal times', hi: 'भोजन के समय हल्का नोटिफिकेशन', te: 'భోజన సమయంలో నోటిఫికేషన్లు' },
+  webNotSupported: { en: 'Notifications are available on mobile app only.', hi: 'नोटिफिकेशन केवल मोबाइल ऐप पर उपलब्ध हैं।', te: 'నోటిఫికేషన్లు మొబైల్ యాప్‌లో మాత్రమే.' },
+  permDenied: { en: 'Permission denied. Enable notifications in settings.', hi: 'अनुमति नहीं। सेटिंग्स में नोटिफिकेशन चालू करें।', te: 'అనుమతి నిరాకరించబడింది. సెట్టింగ్స్‌లో ఆన్ చేయండి.' },
 };
 
 export function t(key: string, lang: Lang = 'en'): string {
