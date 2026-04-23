@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Image, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing, shadow } from '../../src/lib/theme';
 import { t, Lang } from '../../src/lib/i18n';
@@ -20,10 +20,18 @@ export default function Recipes() {
   const [cat, setCat] = useState('all');
   const [search, setSearch] = useState('');
   const [lang, setLang] = useState<Lang>('en');
+  const params = useLocalSearchParams<{ q?: string }>();
 
   useFocusEffect(useCallback(() => {
     api.getProfile().then(p => p && setLang(p.language || 'en')).catch(() => {});
   }, []));
+
+  // If coming from voice search with ?q=...
+  useEffect(() => {
+    if (params.q && typeof params.q === 'string') {
+      setSearch(params.q);
+    }
+  }, [params.q]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -78,6 +86,12 @@ export default function Recipes() {
             placeholderTextColor={colors.textMuted}
             testID="recipes-search"
           />
+          <TouchableOpacity onPress={() => router.push('/voice-search')} style={styles.searchIcon} testID="voice-search-btn">
+            <Ionicons name="mic" size={18} color={colors.terracotta} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/scanner')} style={styles.searchIcon} testID="scanner-btn">
+            <Ionicons name="scan" size={18} color={colors.terracotta} />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -119,6 +133,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   search: { flex: 1, paddingVertical: 12, fontSize: 14, color: colors.indigo },
+  searchIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.saffronCream, alignItems: 'center', justifyContent: 'center', marginLeft: 4 },
   catRow: { paddingHorizontal: spacing.base, gap: 8, paddingVertical: spacing.sm },
   catChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.round, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, height: 36 },
   catChipActive: { backgroundColor: colors.terracotta, borderColor: colors.terracotta },

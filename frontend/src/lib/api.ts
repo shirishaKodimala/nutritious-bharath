@@ -31,6 +31,23 @@ export const api = {
     request('/meal-plan/generate', { method: 'POST', body: JSON.stringify({ unavailable_ingredients: unavailable }) }),
   getLatestPlan: () => request('/meal-plan/latest'),
   getGrowth: () => request('/growth/assessment'),
+  lookupBarcode: (code: string) => request(`/barcode/${code}`),
+  transcribe: async (audioUri: string, language: string = 'en') => {
+    const form = new FormData();
+    // React Native multipart — uri + type + name
+    form.append('file', {
+      uri: audioUri,
+      name: 'voice.m4a',
+      type: 'audio/m4a',
+    } as any);
+    form.append('language', language);
+    const res = await fetch(`${BASE}/api/transcribe`, { method: 'POST', body: form });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`transcribe ${res.status}: ${txt}`);
+    }
+    return res.json();
+  },
 };
 
 export const storage = {

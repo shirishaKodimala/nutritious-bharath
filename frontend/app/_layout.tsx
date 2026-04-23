@@ -18,6 +18,9 @@ export default function RootLayout() {
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="recipe/[id]" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="recipe/[id]/cook" options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
+        <Stack.Screen name="scanner" options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
+        <Stack.Screen name="voice-search" options={{ animation: 'fade', presentation: 'transparentModal' }} />
       </Stack>
     </SafeAreaProvider>
   );

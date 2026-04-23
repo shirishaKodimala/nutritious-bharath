@@ -60,6 +60,15 @@ export default function RecipeDetail() {
           <Text style={styles.title}>{recipe.title[lang] || recipe.title.en}</Text>
           <Text style={styles.desc}>{recipe.description}</Text>
 
+          <TouchableOpacity
+            style={styles.cookBtn}
+            onPress={() => router.push(`/recipe/${recipe.id}/cook`)}
+            testID="start-cooking-btn"
+          >
+            <Ionicons name="play-circle" size={20} color={colors.coconut} />
+            <Text style={styles.cookBtnText}>{t('cookMode', lang)}</Text>
+          </TouchableOpacity>
+
           <View style={styles.metaRow}>
             <MetaItem icon="time-outline" label={t('prepTime', lang)} value={`${recipe.prep_time}${t('min', lang)}`} />
             <MetaItem icon="flame-outline" label={t('cookTime', lang)} value={`${recipe.cook_time}${t('min', lang)}`} />
@@ -157,6 +166,8 @@ const styles = StyleSheet.create({
   content: { backgroundColor: colors.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -24, padding: spacing.base, paddingTop: spacing.lg },
   title: { fontSize: 26, fontFamily: 'serif', fontWeight: '700', color: colors.indigo },
   desc: { fontSize: 14, color: colors.textSecondary, marginTop: spacing.sm, lineHeight: 22 },
+  cookBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.terracotta, paddingVertical: 14, borderRadius: radius.lg, marginTop: spacing.base, ...shadow.soft },
+  cookBtnText: { color: colors.coconut, fontWeight: '700', fontSize: 15 },
   metaRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.base },
   metaItem: { flex: 1, alignItems: 'center', padding: spacing.sm, backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, gap: 2 },
   metaValue: { fontSize: 15, fontWeight: '700', color: colors.indigo, fontFamily: 'serif' },

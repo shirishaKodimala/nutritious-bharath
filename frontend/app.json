@@ -11,8 +11,16 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSUserNotificationUsageDescription": "Gentle reminders at meal times for your child"
+        "NSUserNotificationUsageDescription": "Gentle reminders at meal times for your child",
+        "NSCameraUsageDescription": "Scan grocery barcodes to check nutrition",
+        "NSMicrophoneUsageDescription": "Voice search recipes in your language"
       }
+    },
+    "android": {
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO"
+      ]
     },
     "android": {
       "adaptiveIcon": {
@@ -29,6 +37,14 @@
     "plugins": [
       "expo-router",
       "expo-notifications",
+      [
+        "expo-camera",
+        { "cameraPermission": "Allow Nutritious India to scan grocery barcodes." }
+      ],
+      [
+        "expo-audio",
+        { "microphonePermission": "Allow voice search in your language." }
+      ],
       [
         "expo-splash-screen",
         {

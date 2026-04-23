@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form
+import httpx
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -319,6 +320,82 @@ async def growth_assessment():
         "expected_height_cm": round(expected_height, 1),
         "bmi": round(weight / ((height / 100) ** 2), 1) if height > 0 else 0,
     }
+
+
+# Voice search — Whisper transcription
+@api_router.post("/transcribe")
+async def transcribe(file: UploadFile = File(...), language: str = Form("en")):
+    try:
+        from emergentintegrations.llm.openai import OpenAISpeechToText
+        import tempfile
+
+        contents = await file.read()
+        if len(contents) == 0:
+            raise HTTPException(400, "Empty audio file")
+
+        ext = "m4a"
+        if file.filename and "." in file.filename:
+            ext = file.filename.rsplit(".", 1)[-1].lower()
+        if ext not in ("mp3", "mp4", "mpeg", "mpga", "m4a", "wav", "webm"):
+            ext = "m4a"
+
+        with tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False) as tmp:
+            tmp.write(contents)
+            tmp_path = tmp.name
+
+        stt = OpenAISpeechToText(api_key=os.environ["EMERGENT_LLM_KEY"])
+        with open(tmp_path, "rb") as f:
+            response = await stt.transcribe(
+                file=f,
+                model="whisper-1",
+                response_format="json",
+                language=language if language in ("en", "hi", "te") else "en",
+            )
+        os.unlink(tmp_path)
+        return {"text": response.text.strip()}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Transcription failed: {e}")
+        raise HTTPException(500, f"Transcription failed: {str(e)}")
+
+
+# Barcode lookup via Open Food Facts (no API key needed)
+@api_router.get("/barcode/{code}")
+async def lookup_barcode(code: str):
+    try:
+        async with httpx.AsyncClient(timeout=10) as cx:
+            r = await cx.get(f"https://world.openfoodfacts.org/api/v0/product/{code}.json")
+            data = r.json()
+        if data.get("status") != 1 or not data.get("product"):
+            return {"found": False, "code": code}
+        p = data["product"]
+        nutr = p.get("nutriments", {})
+        return {
+            "found": True,
+            "code": code,
+            "name": p.get("product_name") or p.get("generic_name") or "Unknown",
+            "brand": p.get("brands", ""),
+            "image": p.get("image_front_url") or p.get("image_url") or "",
+            "nutrition_grade": p.get("nutrition_grades", ""),
+            "nova_group": p.get("nova_group"),  # 1-4 processing level (1=unprocessed)
+            "nutrients_per_100g": {
+                "energy_kcal": nutr.get("energy-kcal_100g"),
+                "protein_g": nutr.get("proteins_100g"),
+                "carbs_g": nutr.get("carbohydrates_100g"),
+                "sugars_g": nutr.get("sugars_100g"),
+                "fat_g": nutr.get("fat_100g"),
+                "saturated_fat_g": nutr.get("saturated-fat_100g"),
+                "fiber_g": nutr.get("fiber_100g"),
+                "salt_g": nutr.get("salt_100g"),
+                "sodium_g": nutr.get("sodium_100g"),
+            },
+            "ingredients_text": p.get("ingredients_text", ""),
+            "allergens": [a.replace("en:", "") for a in p.get("allergens_tags", [])],
+        }
+    except Exception as e:
+        logger.error(f"Barcode lookup failed: {e}")
+        raise HTTPException(500, f"Lookup failed: {str(e)}")
 
 
 app.include_router(api_router)

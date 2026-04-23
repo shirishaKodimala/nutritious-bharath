@@ -92,3 +92,6 @@ Mobile-first Expo React Native app with bottom tab navigation.
 ✅ Ingredient substitutions (20+ global swaps with reasons, auto-matched per recipe)
 ✅ Local meal reminder notifications (breakfast/lunch/snack/dinner, per-meal toggle + ±30min time adjust)
 ✅ Pantry-aware AI meal planner — mother taps what she's out of; Claude plans 7 days without those ingredients + excludes them from shopping list
+✅ Recipe Cook Mode — step-by-step full-screen timer (auto-advance, pause/resume, prev/next, haptics)
+✅ Barcode scanner — Expo Camera + Open Food Facts API (name, brand, Nutri-Score, NOVA group, per-100g nutrients, allergens)
+✅ Voice search — OpenAI Whisper via Emergent LLM key, EN/HI/TE, record 5s → transcribe → auto-search
