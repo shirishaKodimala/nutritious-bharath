@@ -1,58 +1,289 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
+import json
 import logging
+import uuid
+import re
 from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import List
-import uuid
-from datetime import datetime
+from typing import List, Optional, Dict, Any
+from datetime import datetime, timezone
 
+from recipes_seed import RECIPES
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Create the main app without a prefix
-app = FastAPI()
-
-# Create a router with the /api prefix
+app = FastAPI(title="Nutritious India API")
 api_router = APIRouter(prefix="/api")
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
-# Define Models
-class StatusCheck(BaseModel):
+
+class Profile(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    mother_name: str
+    child_name: str
+    child_age_months: int
+    child_weight_kg: float
+    child_height_cm: float
+    allergies: List[str] = []
+    region: str = "pan-india"
+    language: str = "en"
+    dietary: str = "vegetarian"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
 
-# Add your routes to the router instead of directly to app
+class ProfileCreate(BaseModel):
+    mother_name: str
+    child_name: str
+    child_age_months: int
+    child_weight_kg: float
+    child_height_cm: float
+    allergies: List[str] = []
+    region: str = "pan-india"
+    language: str = "en"
+    dietary: str = "vegetarian"
+
+
+class Recipe(BaseModel):
+    id: str
+    title: Dict[str, str]
+    category: str
+    region: str
+    age_min: int
+    age_max: int
+    prep_time: int
+    cook_time: int
+    difficulty: str
+    description: str
+    ingredients: List[str]
+    steps: List[str]
+    nutrition: Dict[str, Any]
+    image: str
+    ayurvedic: bool
+    scientific: bool
+    rating: float
+
+
+class MealPlanRequest(BaseModel):
+    profile_id: Optional[str] = None
+
+
+class MealPlanDay(BaseModel):
+    day: str
+    breakfast: str
+    lunch: str
+    snack: str
+    dinner: str
+    tip: str
+
+
+class MealPlan(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    profile_id: Optional[str] = None
+    days: List[MealPlanDay]
+    shopping_list: List[str]
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+async def seed_recipes():
+    existing = await db.recipes.count_documents({})
+    if existing >= len(RECIPES):
+        logger.info(f"Recipes already seeded: {existing}")
+        return
+    await db.recipes.delete_many({})
+    docs = []
+    for r in RECIPES:
+        doc = {**r, "id": str(uuid.uuid4())}
+        docs.append(doc)
+    await db.recipes.insert_many(docs)
+    logger.info(f"Seeded {len(docs)} recipes")
+
+
 @api_router.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "Nutritious India API", "status": "ok"}
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.dict()
-    status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.dict())
-    return status_obj
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    status_checks = await db.status_checks.find().to_list(1000)
-    return [StatusCheck(**status_check) for status_check in status_checks]
+@api_router.post("/profile", response_model=Profile)
+async def create_or_update_profile(payload: ProfileCreate):
+    existing = await db.profiles.find_one({}, {"_id": 0})
+    if existing:
+        await db.profiles.update_one({"id": existing["id"]}, {"$set": payload.dict()})
+        updated = {**existing, **payload.dict()}
+        return Profile(**updated)
+    profile = Profile(**payload.dict())
+    await db.profiles.insert_one(profile.dict().copy())
+    return profile
 
-# Include the router in the main app
+
+@api_router.get("/profile", response_model=Optional[Profile])
+async def get_profile():
+    doc = await db.profiles.find_one({}, {"_id": 0})
+    if not doc:
+        return None
+    return Profile(**doc)
+
+
+@api_router.get("/recipes", response_model=List[Recipe])
+async def list_recipes(category: Optional[str] = None, region: Optional[str] = None, search: Optional[str] = None):
+    q: Dict[str, Any] = {}
+    if category and category != "all":
+        q["category"] = category
+    if region and region != "all":
+        q["$or"] = [{"region": region}, {"region": "pan-india"}]
+    cursor = db.recipes.find(q, {"_id": 0})
+    recipes = await cursor.to_list(500)
+    if search:
+        s = search.lower()
+        recipes = [r for r in recipes if s in r["title"]["en"].lower() or s in r["description"].lower()]
+    return [Recipe(**r) for r in recipes]
+
+
+@api_router.get("/recipes/{recipe_id}", response_model=Recipe)
+async def get_recipe(recipe_id: str):
+    doc = await db.recipes.find_one({"id": recipe_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Recipe not found")
+    return Recipe(**doc)
+
+
+@api_router.post("/meal-plan/generate", response_model=MealPlan)
+async def generate_meal_plan(payload: MealPlanRequest):
+    profile = await db.profiles.find_one({}, {"_id": 0})
+    if not profile:
+        raise HTTPException(400, "Please create a profile first")
+
+    all_recipes = await db.recipes.find({}, {"_id": 0}).to_list(500)
+    recipe_titles = [r["title"]["en"] for r in all_recipes]
+
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+
+        system_msg = (
+            "You are a pediatric nutritionist specializing in Indian cuisine for toddlers aged 2-3 years. "
+            "You blend Ayurvedic wisdom with modern nutrition science. "
+            "Always respond in valid JSON only, no markdown, no explanations."
+        )
+
+        allergies = ", ".join(profile.get("allergies", [])) or "none"
+        region = profile.get("region", "pan-india")
+
+        user_text = f"""Generate a 7-day meal plan for a {profile['child_age_months']}-month-old child named {profile['child_name']}.
+Region preference: {region}. Allergies: {allergies}. Dietary: {profile.get('dietary', 'vegetarian')}.
+
+You MAY use these recipes (pick variety): {', '.join(recipe_titles[:40])}
+
+Return ONLY valid JSON in this exact structure, no extra text:
+{{
+  "days": [
+    {{"day": "Monday", "breakfast": "...", "lunch": "...", "snack": "...", "dinner": "...", "tip": "short ayurvedic or nutrition tip"}}
+  ],
+  "shopping_list": ["item1", "item2"]
+}}
+Include all 7 days Monday to Sunday."""
+
+        chat = LlmChat(
+            api_key=os.environ["EMERGENT_LLM_KEY"],
+            session_id=f"meal-plan-{uuid.uuid4()}",
+            system_message=system_msg,
+        ).with_model("anthropic", "claude-sonnet-4-5-20250929")
+
+        response = await chat.send_message(UserMessage(text=user_text))
+        text = response.strip()
+        text = re.sub(r"^```(?:json)?\s*", "", text)
+        text = re.sub(r"\s*```$", "", text)
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if match:
+            text = match.group(0)
+        data = json.loads(text)
+
+        plan = MealPlan(
+            profile_id=profile["id"],
+            days=[MealPlanDay(**d) for d in data["days"]],
+            shopping_list=data.get("shopping_list", []),
+        )
+    except Exception as e:
+        logger.error(f"Claude generation failed: {e}, using fallback plan")
+        plan = _fallback_plan(profile, all_recipes)
+
+    await db.meal_plans.insert_one(plan.dict().copy())
+    return plan
+
+
+def _fallback_plan(profile: dict, recipes: list) -> MealPlan:
+    by_cat = {"breakfast": [], "lunch": [], "snack": [], "dinner": []}
+    for r in recipes:
+        if r["category"] in by_cat:
+            by_cat[r["category"]].append(r["title"]["en"])
+
+    days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    tips = [
+        "Warm ghee on grains aids digestion and brain development.",
+        "Introduce one new vegetable every week to expand palate.",
+        "Serve meals at consistent times to build healthy rhythm.",
+        "Seasonal fruits are nature's medicine — eat what grows nearby.",
+        "Cumin water after meals supports toddler digestion.",
+        "A little turmeric daily boosts immunity naturally.",
+        "Sit together during meals — food tastes better with family.",
+    ]
+    days = []
+    for i, day_name in enumerate(days_of_week):
+        days.append(MealPlanDay(
+            day=day_name,
+            breakfast=by_cat["breakfast"][i % max(1, len(by_cat["breakfast"]))] if by_cat["breakfast"] else "Ragi Porridge",
+            lunch=by_cat["lunch"][i % max(1, len(by_cat["lunch"]))] if by_cat["lunch"] else "Dal Khichdi",
+            snack=by_cat["snack"][i % max(1, len(by_cat["snack"]))] if by_cat["snack"] else "Fruit Chaat",
+            dinner=by_cat["dinner"][i % max(1, len(by_cat["dinner"]))] if by_cat["dinner"] else "Soft Chapati with Dal",
+            tip=tips[i],
+        ))
+    shopping = ["Rice", "Wheat flour", "Moong dal", "Toor dal", "Ghee", "Milk", "Yogurt",
+                "Seasonal vegetables", "Seasonal fruits", "Turmeric", "Cumin", "Jaggery", "Cardamom"]
+    return MealPlan(profile_id=profile.get("id"), days=days, shopping_list=shopping)
+
+
+@api_router.get("/meal-plan/latest", response_model=Optional[MealPlan])
+async def get_latest_plan():
+    doc = await db.meal_plans.find_one({}, {"_id": 0}, sort=[("generated_at", -1)])
+    if not doc:
+        return None
+    return MealPlan(**doc)
+
+
+@api_router.get("/growth/assessment")
+async def growth_assessment():
+    p = await db.profiles.find_one({}, {"_id": 0})
+    if not p:
+        return {"status": "no_profile"}
+    age_m = p["child_age_months"]
+    weight = p["child_weight_kg"]
+    height = p["child_height_cm"]
+    expected_weight = 10 + (max(age_m, 24) - 24) * 0.2
+    expected_height = 86 + (max(age_m, 24) - 24) * 0.8
+    status = "on-track"
+    if weight < expected_weight - 1.5:
+        status = "below"
+    elif weight > expected_weight + 2:
+        status = "above"
+    return {
+        "status": status,
+        "weight_kg": weight,
+        "expected_weight_kg": round(expected_weight, 1),
+        "height_cm": height,
+        "expected_height_cm": round(expected_height, 1),
+        "bmi": round(weight / ((height / 100) ** 2), 1) if height > 0 else 0,
+    }
+
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -63,12 +294,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+
+@app.on_event("startup")
+async def startup_event():
+    await seed_recipes()
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
