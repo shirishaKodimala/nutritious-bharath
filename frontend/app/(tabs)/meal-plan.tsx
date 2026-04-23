@@ -189,6 +189,32 @@ export default function MealPlan() {
             </View>
           )}
 
+          {/* Pantry check — also shown on existing-plan screen so mother can tweak and regenerate */}
+          <View style={[styles.pantryCard, { marginHorizontal: spacing.base, marginTop: spacing.base }]} testID="pantry-card-inline">
+            <View style={styles.pantryHeader}>
+              <Ionicons name="basket" size={16} color={colors.terracotta} />
+              <Text style={styles.pantryTitle}>{t('pantryCheck', lang)}</Text>
+            </View>
+            <Text style={styles.pantryDesc}>{t('pantryDesc', lang)}</Text>
+            <View style={styles.pantryGrid}>
+              {PANTRY_ITEMS.map(item => {
+                const selected = unavailable.includes(item.key);
+                return (
+                  <TouchableOpacity
+                    key={item.key}
+                    style={[styles.pantryChip, selected && styles.pantryChipActive]}
+                    onPress={() => togglePantry(item.key)}
+                    testID={`pantry-inline-${item.key}`}
+                  >
+                    <Ionicons name={item.icon as any} size={13} color={selected ? colors.coconut : colors.textSecondary} />
+                    <Text style={[styles.pantryChipText, selected && styles.pantryChipTextActive]}>{item.label}</Text>
+                    {selected && <Ionicons name="close-circle" size={14} color={colors.coconut} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
           <TouchableOpacity style={[styles.primaryBtn, { margin: spacing.base }]} onPress={generate} testID="regenerate-btn">
             <Ionicons name="refresh" size={18} color={colors.coconut} />
             <Text style={styles.primaryBtnText}>{t('regeneratePlan', lang)}</Text>
