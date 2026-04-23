@@ -1,0 +1,176 @@
+{
+  "theme": "Traditional Wisdom Meets Modern Science",
+  "archetype": "Organic & Earthy",
+  "color_palette": {
+    "primary": {
+      "terracotta_red": "#D2691E",
+      "turmeric_gold": "#FFB84D",
+      "basil_green": "#7BA474",
+      "saffron_cream": "#F4E4C1"
+    },
+    "secondary": {
+      "indigo_blue": "#4B0082",
+      "coconut_white": "#F5F5DC",
+      "spice_brown": "#8B4513"
+    },
+    "accent": {
+      "marigold_orange": "#FF8C00",
+      "cumin_yellow": "#FFD700"
+    },
+    "background": "#F4E4C1",
+    "text_primary": "#4B0082",
+    "text_secondary": "#8B4513",
+    "surface": "#F5F5DC",
+    "badges": {
+      "ayurvedic": "#7BA474",
+      "scientific": "#4B0082"
+    }
+  },
+  "typography": {
+    "headings": {
+      "family": "Noto Serif Display",
+      "fallback": "serif",
+      "weights": {
+        "regular": 400,
+        "bold": 700
+      }
+    },
+    "body": {
+      "family": "Poppins",
+      "fallback": "sans-serif",
+      "weights": {
+        "regular": 400,
+        "medium": 500
+      }
+    },
+    "scale": {
+      "h1": "text-4xl sm:text-5xl tracking-tight",
+      "h2": "text-3xl sm:text-4xl tracking-tight",
+      "h3": "text-2xl",
+      "h4": "text-xl",
+      "body": "text-base leading-relaxed",
+      "small": "text-sm",
+      "overline": "text-xs tracking-[0.2em] uppercase"
+    }
+  },
+  "spacing_and_layout": {
+    "base": "4px",
+    "card_radius": "8px",
+    "button_radius": "12px",
+    "padding": {
+      "screen": "p-4 sm:p-6",
+      "card": "p-4 sm:p-6",
+      "section": "py-8 sm:py-12"
+    },
+    "shadows": {
+      "soft_warm": "shadow-[0_4px_14px_rgba(139,69,19,0.08)]",
+      "card_hover": "shadow-[0_8px_24px_rgba(139,69,19,0.12)]"
+    }
+  },
+  "visual_enhancers": {
+    "icons": "Line icons 2px stroke, lucide-react-native",
+    "motifs": "subtle paisley, mango, lotus background motifs, rangoli accents",
+    "illustrations": "flat 2D illustrations with subtle gradients"
+  },
+  "components": {
+    "bottom_tab_bar": {
+      "background": "#F5F5DC",
+      "active_tint": "#D2691E",
+      "inactive_tint": "#8B4513",
+      "layout": "fixed bottom, flex-row, space-around, py-2, shadow-top"
+    },
+    "card": {
+      "background": "#FFFFFF",
+      "border_radius": "8px",
+      "padding": "p-4",
+      "shadow": "soft_warm",
+      "border": "1px solid rgba(139,69,19,0.1)"
+    },
+    "button": {
+      "primary": {
+        "background": "#D2691E",
+        "text": "#F5F5DC",
+        "border_radius": "12px"
+      },
+      "secondary": {
+        "background": "transparent",
+        "border": "1px solid #D2691E",
+        "text": "#D2691E",
+        "border_radius": "12px"
+      }
+    },
+    "badges": {
+      "ayurvedic": {
+        "background": "#7BA474",
+        "text": "#FFFFFF",
+        "icon": "Leaf"
+      },
+      "scientific": {
+        "background": "#4B0082",
+        "text": "#FFFFFF",
+        "icon": "Microscope"
+      }
+    }
+  },
+  "screens": {
+    "onboarding": {
+      "layout": "Full screen carousel, flex-col, center aligned content",
+      "elements": "3-slide welcome, Child profile form (name, age, weight, height, allergies, region, language)",
+      "actions": "Next button, Skip button, Final submit to local storage"
+    },
+    "dashboard": {
+      "layout": "Vertical scroll, stacked cards",
+      "elements": "Mother greeting header, Child's growth snapshot card, Today's meal card, Tip of the day, Seasonal/festival banner"
+    },
+    "recipes_browser": {
+      "layout": "Search bar + Filters + Grid/List of recipe cards",
+      "elements": "Filter by meal type/region/age, Recipe card (Image, Title, Ayurvedic/Scientific Badges, Time/Prep info)"
+    },
+    "recipe_detail": {
+      "layout": "Hero image + scrollable details",
+      "elements": "Title, Badges, Nutritional info, Ingredients list, Steps list, Back button"
+    },
+    "meal_planner": {
+      "layout": "Horizontal scrollable days + vertical meals list",
+      "elements": "7-day swipeable view, Breakfast/Lunch/Dinner slots, AI Generate button, Shopping list toggle"
+    },
+    "profile": {
+      "layout": "Vertical list of sections",
+      "elements": "Mother + child profile details, Growth tracker graph, Language toggle (EN/HI/TE)"
+    }
+  },
+  "media": {
+    "image_urls": {
+      "khichdi": {
+        "url": "https://images.pexels.com/photos/6363501/pexels-photo-6363501.jpeg",
+        "description": "Indian baby food dal khichdi",
+        "category": "recipes"
+      },
+      "mother_child": {
+        "url": "https://images.pexels.com/photos/7491419/pexels-photo-7491419.jpeg",
+        "description": "Indian mother feeding child in kitchen",
+        "category": "onboarding_hero"
+      },
+      "spices": {
+        "url": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d",
+        "description": "Variety of Indian spices",
+        "category": "dashboard_banner"
+      },
+      "turmeric": {
+        "url": "https://images.pexels.com/photos/12122270/pexels-photo-12122270.jpeg",
+        "description": "Organic turmeric roots",
+        "category": "recipes"
+      }
+    }
+  },
+  "instructions_to_main_agent": [
+    "Use Tailwind CSS or React Native stylesheets adhering to these color tokens and spacing metrics.",
+    "Ensure headings use Noto Serif Display or an equivalent serif fallback if custom fonts aren't loaded immediately.",
+    "Ensure body font uses Poppins or an equivalent sans-serif fallback.",
+    "Implement bottom tab navigation utilizing icons (e.g. lucide-react-native) with 2px stroke weight.",
+    "Apply 'soft_warm' shadow to all elevated cards, utilizing a subtle brown tint instead of generic gray/black.",
+    "Ensure the background color #F4E4C1 (Saffron Cream) is set as the main app background to evoke warmth.",
+    "Add Ayurvedic and Scientific validation badges strictly following the specified colors (#7BA474 and #4B0082).",
+    "All interactive elements MUST have a data-testid attribute in kebab-case."
+  ]
+}
